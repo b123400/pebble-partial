@@ -1,6 +1,9 @@
 #include <pebble.h>
 #include <stdio.h>
 #include "math.h"
+#include "SmallMaths.h"
+
+const float HALF_PI = 1.57079633;
 
 static Window *s_window;
 static Layer *bitmap_layer;
@@ -9,19 +12,58 @@ static GColor line_color;
 static GPath *fillingPath = NULL;
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define ABS(X) (((X) >= 0) ? (X) : -(X))
 
 static float calcuate_height_ratio(float ratio) {
-  return ratio;
+  // here, given the input `ratio`, I have to calculate the height ratio to radius
+  // Which means "Within the half circle, if a certain area is filled up, what is it's depth".
+  // Integrate (0 -> k) (1-x^2) dx
+  // Which means solving "area = ((1-x^2)^0.5 * x + asin(x))"
+  // since it's so complicated to calculated it, I am just using brute force.
+  // after all the radius of pebble round is just 90px, A maximum of 7 tries is enough to find the answer.
+  float targetArea = HALF_PI * ratio;
+  float currentMin = 0.f;
+  float currentMax = 1.f;
+  float lastValue = -1.f;
+  while(true) {
+    float currentValue = (currentMin + currentMax) / 2.0;
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "(%f - %f), currentValue: %f", currentMin, currentMax, currentValue);
+    float area = sm_sqrt(1-sm_powint(currentValue,2)) * currentValue + sm_asin(currentValue);
+    if (ABS(area - targetArea) < 0.0005) {
+      lastValue = currentValue;
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "area close: %f, %f", area, targetArea);
+      break;
+    } else if (area > targetArea) {
+      currentMax = currentValue;
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "down to: (%f - %f)", currentMin, currentMax);
+    } else {
+      currentMin = currentValue;
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "up to: (%f - %f)", currentMin, currentMax);
+    }
+    if (lastValue > 0 && ABS(lastValue - currentValue) < 1/90.0) {
+      lastValue = currentValue;
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "seems ok? %f %f", lastValue, currentValue);
+      break;
+    }
+    if (currentMin > currentMax) {
+      // in case if this happens, floating point has probably fucked up so lets pretend it's accurate enough
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "fuck %f %f", currentMin, currentMax);
+      lastValue = currentValue;
+      break;
+    }
+    lastValue = currentValue;
+  }
+  return lastValue;
 }
 
 static void bitmap_layer_update_proc(Layer *layer, GContext* ctx) {
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
-  int32_t minute = 20;//; (*t).tm_min;
+  int32_t minute = (*t).tm_min;
   int32_t hour = (*t).tm_hour;
 
   int32_t hour_angle = TRIG_MAX_ANGLE * (hour % 12) / 12.0;
-  float minute_ratio = (minute / 60.0);
+  float minute_ratio = minute / 60.0;
 
   GRect bounds = layer_get_bounds(layer);
   GPoint center = grect_center_point(&bounds);
