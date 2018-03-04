@@ -75,7 +75,10 @@ static void bitmap_layer_update_proc(Layer *layer, GContext* ctx) {
 
   GRect bounds = layer_get_bounds(layer);
   GPoint center = grect_center_point(&bounds);
-  int diameter = MIN(bounds.size.w, bounds.size.h);
+  int diameter = MIN(bounds.size.w, bounds.size.h) + 4;
+
+  // background_color = GColorFromHEX(0xffffff);
+  // line_color = GColorFromHEX(0x11ff11);
 
   // background color
   graphics_context_set_fill_color(ctx, background_color);
@@ -86,12 +89,12 @@ static void bitmap_layer_update_proc(Layer *layer, GContext* ctx) {
   graphics_context_set_antialiased(ctx, true);
 
   GPoint diameterPoint1 = GPoint(
-    center.x + sin_lookup(hour_angle) * (bounds.size.w / 2) / TRIG_MAX_RATIO,
-    center.y - cos_lookup(hour_angle) * (bounds.size.h / 2) / TRIG_MAX_RATIO
+    center.x + sin_lookup(hour_angle) * (diameter / 2) / TRIG_MAX_RATIO,
+    center.y - cos_lookup(hour_angle) * (diameter / 2) / TRIG_MAX_RATIO
   );
   GPoint diameterPoint2 = GPoint(
-    center.x - sin_lookup(hour_angle) * (bounds.size.w / 2) / TRIG_MAX_RATIO,
-    center.y + cos_lookup(hour_angle) * (bounds.size.h / 2) / TRIG_MAX_RATIO
+    center.x - sin_lookup(hour_angle) * (diameter / 2) / TRIG_MAX_RATIO,
+    center.y + cos_lookup(hour_angle) * (diameter / 2) / TRIG_MAX_RATIO
   );
 
   graphics_draw_line(ctx, diameterPoint1, diameterPoint2);
