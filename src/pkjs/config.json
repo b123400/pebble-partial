@@ -1,0 +1,29 @@
+[
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "🤘🤘🤘🤘"
+      },
+      {
+        "type": "color",
+        "messageKey": "background_color",
+        "defaultValue": "FFFFFF",
+        "label": "Background Color",
+        "allowGray": true
+      },
+      {
+        "type": "color",
+        "messageKey": "line_color",
+        "defaultValue": "ff1111",
+        "label": "Filled Color",
+        "allowGray": true
+      },
+      {
+        "type": "submit",
+        "defaultValue": "Save"
+      }
+    ]
+  }
+]

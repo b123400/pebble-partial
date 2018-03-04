@@ -4,6 +4,7 @@
 #include "SmallMaths.h"
 
 const float HALF_PI = 1.57079633;
+#define SETTINGS_KEY 1
 
 static Window *s_window;
 static Layer *bitmap_layer;
@@ -13,6 +14,13 @@ static GPath *fillingPath = NULL;
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define ABS(X) (((X) >= 0) ? (X) : -(X))
+
+typedef struct ClaySettings {
+  GColor BackgroundColor;
+  GColor LineColor;
+} ClaySettings;
+
+static ClaySettings settings;
 
 static float calcuate_height_ratio(float ratio) {
   // here, given the input `ratio`, I have to calculate the height ratio to radius
@@ -69,9 +77,6 @@ static void bitmap_layer_update_proc(Layer *layer, GContext* ctx) {
   GPoint center = grect_center_point(&bounds);
   int diameter = MIN(bounds.size.w, bounds.size.h);
 
-  background_color = GColorFromHEX(0xff0000);
-  line_color = GColorFromHEX(0x00ff00);
-
   // background color
   graphics_context_set_fill_color(ctx, background_color);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
@@ -118,6 +123,23 @@ static void bitmap_layer_update_proc(Layer *layer, GContext* ctx) {
   gpath_draw_filled(ctx, fillingPath);
 }
 
+static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) {
+  // Read color preferences
+  Tuple *bg_color_t = dict_find(iter, MESSAGE_KEY_background_color);
+  if(bg_color_t) {
+    background_color = GColorFromHEX(bg_color_t->value->int32);
+  }
+  Tuple *line_color_t = dict_find(iter, MESSAGE_KEY_line_color);
+  if(line_color_t) {
+    line_color = GColorFromHEX(line_color_t->value->int32);
+  }
+  layer_mark_dirty(bitmap_layer);
+
+  settings.BackgroundColor = background_color;
+  settings.LineColor = line_color;
+  persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
+}
+
 static void prv_window_load(Window *window) {
 Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
@@ -132,6 +154,19 @@ static void prv_window_unload(Window *window) {
 }
 
 static void prv_init(void) {
+
+  // default settings
+  settings.BackgroundColor = GColorWhite;
+  settings.LineColor = GColorRed;
+
+  persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
+  // apply saved data
+  background_color = settings.BackgroundColor;
+  line_color = settings.LineColor;
+
+  app_message_register_inbox_received(prv_inbox_received_handler);
+  app_message_open(128, 128);
+
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers) {
     .load = prv_window_load,
